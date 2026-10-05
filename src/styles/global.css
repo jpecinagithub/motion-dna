@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-abyss: #05070d;
+  --color-panel: #0a0f1c;
+  --color-ink: #e8eefc;
+  --color-dim: #8b98b8;
+  --color-electric: #3b82f6;
+  --color-viol: #8b5cf6;
+  --color-coral: #fb7185;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #05070d;
+  color: #e8eefc;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+}
+
+/* Slim dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e2a45 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #1e2a45;
+  border-radius: 4px;
+}
+
+/* Range inputs */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #1a2440;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #05070d;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #05070d;
+}
+input[type="range"]:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+select {
+  background: #0a0f1c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #e8eefc;
+  outline: none;
+}
+select:focus {
+  border-color: #3b82f6;
+}
