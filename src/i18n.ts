@@ -62,6 +62,7 @@ const es = {
   'analysis.estimated': 'Valores relativos / estimados: sin calibración espacial.',
   'analysis.noSession': 'Procesa un vídeo para ver el análisis.',
   'analysis.showLabels': 'Etiquetas',
+  'analysis.outOfFrame': 'fuera de encuadre',
   'analysis.showSkeleton': 'Esqueleto',
 
   'joint.elbowL': 'Codo izq.',
@@ -131,7 +132,7 @@ const es = {
 
   'errors.videoIncompatible': 'Vídeo incompatible o corrupto. Prueba con MP4/H.264.',
   'errors.tooLong': 'El vídeo supera los 90 s. Recórtalo e inténtalo de nuevo.',
-  'errors.noPose': 'No se detectó pose humana en el vídeo. Prueba con una toma donde el cuerpo se vea completo.',
+  'errors.noPose': 'No se detectó cuerpo humano en el vídeo. Prueba con una toma donde se vea al menos parte del cuerpo en movimiento.',
   'errors.modelFailed': 'No se pudo cargar el modelo de pose. Revisa tu conexión e inténtalo de nuevo.',
   'errors.noWebGL': 'Tu navegador no soporta WebGL, necesario para la escena 3D.',
   'errors.generic': 'Algo falló. Inténtalo de nuevo.',
@@ -208,6 +209,7 @@ const en: Dict = {
   'analysis.estimated': 'Relative / estimated values: no spatial calibration.',
   'analysis.noSession': 'Process a video to see the analysis.',
   'analysis.showLabels': 'Labels',
+  'analysis.outOfFrame': 'out of frame',
   'analysis.showSkeleton': 'Skeleton',
 
   'joint.elbowL': 'Left elbow',
@@ -277,7 +279,7 @@ const en: Dict = {
 
   'errors.videoIncompatible': 'Incompatible or corrupt video. Try MP4/H.264.',
   'errors.tooLong': 'The video is longer than 90 s. Trim it and try again.',
-  'errors.noPose': 'No human pose detected in the video. Try a take where the full body is visible.',
+  'errors.noPose': 'No human body detected in the video. Try a take where at least part of the body is moving and visible.',
   'errors.modelFailed': 'Could not load the pose model. Check your connection and try again.',
   'errors.noWebGL': 'Your browser does not support WebGL, required for the 3D scene.',
   'errors.generic': 'Something failed. Please try again.',

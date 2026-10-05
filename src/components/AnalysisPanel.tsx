@@ -3,10 +3,11 @@ import type { ReactElement } from 'react';
 import { useAppStore } from '../stores/app';
 import { useT } from '../i18n';
 import type { DictKey } from '../i18n';
+import type { JointId } from '../types';
 import { getTimeMs } from '../lib/playhead';
 import { frameAtTime, frameIndexAtTime } from '../lib/utils';
 import { jointAngles } from '../lib/math';
-import { JOINT_IDS } from '../lib/joints';
+import { JOINT_IDS, frameVisibleJoints, sessionTrackedJoints } from '../lib/joints';
 import { JOINT_COLORS } from '../config';
 
 const PANEL =
@@ -63,8 +64,18 @@ export function AnalysisPanel(): ReactElement {
   }, []);
 
   const frame = session ? frameAtTime(session.frames, now) : null;
-  const angles = useMemo(() => jointAngles(frame?.landmarks ?? []), [frame]);
+  const frameVis = useMemo(
+    () => (frame ? new Set<JointId>(frameVisibleJoints(frame)) : new Set<JointId>()),
+    [frame],
+  );
+  const angles = useMemo(() => jointAngles(frame?.landmarks ?? [], frameVis), [frame, frameVis]);
   const frameIndex = session ? frameIndexAtTime(session.frames, now) : -1;
+
+  /** Joints the session can meaningfully track (visible in enough frames). */
+  const trackedJoints = useMemo(
+    () => (session ? sessionTrackedJoints(session.frames) : []),
+    [session],
+  );
 
   const maxSpeed = useMemo(
     () => (session ? maxOf(session.metrics.speedProfile) : 1),
@@ -102,14 +113,20 @@ export function AnalysisPanel(): ReactElement {
         <ul className="space-y-1">
           {JOINT_IDS.map((id) => {
             const a = angles[id];
+            const tracked = trackedJoints.includes(id);
             return (
-              <li key={id} className="flex items-center gap-2 text-[13px] leading-5">
+              <li
+                key={id}
+                className={`flex items-center gap-2 text-[13px] leading-5 ${tracked ? '' : 'opacity-40'}`}
+                title={tracked ? undefined : t('analysis.outOfFrame')}
+              >
                 <input
                   type="checkbox"
                   checked={selectedJoints.includes(id)}
                   onChange={() => toggleJoint(id)}
+                  disabled={!tracked}
                   aria-label={t(('joint.' + id) as DictKey)}
-                  className="h-3.5 w-3.5 shrink-0 accent-[#3b82f6]"
+                  className="h-3.5 w-3.5 shrink-0 accent-[#3b82f6] disabled:cursor-not-allowed"
                 />
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
@@ -118,9 +135,15 @@ export function AnalysisPanel(): ReactElement {
                 <span className="flex-1 truncate text-[#c6d0e8]">
                   {t(('joint.' + id) as DictKey)}
                 </span>
-                <span className="font-mono text-[#e8eefc]">
-                  {a != null ? `${Math.round(a)}°` : '—'}
-                </span>
+                {tracked ? (
+                  <span className="font-mono text-[#e8eefc]">
+                    {a != null ? `${Math.round(a)}°` : '—'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] uppercase tracking-wider text-[#8b98b8]">
+                    {t('analysis.outOfFrame')}
+                  </span>
+                )}
               </li>
             );
           })}

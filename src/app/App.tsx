@@ -28,7 +28,7 @@ import {
 import { useT } from '../i18n';
 import { abortProcessing } from '../lib/processing';
 import { getTimeMs, getVideoElement, setTimeMs } from '../lib/playhead';
-import { DEFAULT_TRAIL_INDICES, JOINTS } from '../lib/joints';
+import { DEFAULT_TRAIL_INDICES, JOINTS, frameVisibleJoints, sessionTrackedJoints } from '../lib/joints';
 import { listSessions } from '../storage/db';
 import { useAppStore } from '../stores/app';
 import {
@@ -93,6 +93,28 @@ function SceneContent() {
     [selectedJoints],
   );
 
+  /**
+   * Partial-body support: joints the session can meaningfully track
+   * (visible in enough frames). Trails/arcs are limited to these so we never
+   * draw metrics for hallucinated body parts.
+   */
+  const trackedJoints = useMemo(
+    () => (session ? sessionTrackedJoints(session.frames) : []),
+    [session],
+  );
+  const effectiveTrailIndices = useMemo(() => {
+    const fromSelection = trailIndices.filter((_, i) => trackedJoints.includes(selectedJoints[i]));
+    if (fromSelection.length > 0) return fromSelection;
+    const tracked = trackedJoints.map((id) => JOINTS[id].trailIndex);
+    return tracked.length > 0 ? [...new Set(tracked)] : DEFAULT_TRAIL_INDICES;
+  }, [trailIndices, trackedJoints, selectedJoints]);
+
+  /** Joints visible in the current frame (for gating arcs/labels). */
+  const frameVisible = useMemo(
+    () => (frame ? new Set(frameVisibleJoints(frame)) : new Set<JointId>()),
+    [frame],
+  );
+
   const signature = useMemo(
     () => (session ? computeSignatureVector(session) : null),
     [session],
@@ -141,7 +163,7 @@ function SceneContent() {
               frames={frames}
               upToIndex={idx}
               length={trailLength}
-              landmarkIndices={trailIndices.length > 0 ? trailIndices : DEFAULT_TRAIL_INDICES}
+              landmarkIndices={effectiveTrailIndices}
             />
           )}
         </>
@@ -159,7 +181,7 @@ function SceneContent() {
           count={explode.count}
           spacing={explode.spacing}
           collapsed={explode.collapsed}
-          trailIndices={trailIndices.length > 0 ? trailIndices : DEFAULT_TRAIL_INDICES}
+          trailIndices={effectiveTrailIndices}
           selectedTimeMs={now}
           onSelectTime={(tms) => {
             setPlaying(false);
@@ -205,14 +227,16 @@ function SceneContent() {
       {mode === 'signature' && signature && <SignatureMesh vector={signature} animated />}
 
       {showArcs &&
-        selectedJoints.map((id) => (
-          <AngleArc
-            key={id}
-            landmarks={frame!.landmarks}
-            jointId={id}
-            showLabel={showLabels}
-          />
-        ))}
+        selectedJoints
+          .filter((id) => frameVisible.has(id))
+          .map((id) => (
+            <AngleArc
+              key={id}
+              landmarks={frame!.landmarks}
+              jointId={id}
+              showLabel={showLabels}
+            />
+          ))}
     </group>
   );
 }

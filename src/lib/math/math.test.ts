@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { JointId, Landmark, PoseFrame } from '../../types';
-import { JOINT_IDS } from '../joints';
+import { JOINT_IDS, frameVisibleJoints, sessionTrackedJoints, visibleJoints } from '../joints';
 import { angleAt, jointAngleSeries, jointAngles } from './angles';
 import { bestOffsetFrames, dtw } from './dtw';
 import { computeMetrics, computeSignatureVector, landmarkSpeeds } from './metrics';
@@ -279,5 +279,75 @@ describe('landmarkSpeeds', () => {
     const frames = syntheticFrames(20);
     expect(landmarkSpeeds(frames, 0).every((v) => v === 0)).toBe(true);
     expect(landmarkSpeeds([], 15)).toEqual([]);
+  });
+});
+
+describe('partial-body visibility', () => {
+  /** upper-body-only pose: knees/ankles hidden (visibility 0) */
+  function upperBodyPose(): Landmark[] {
+    const p = syntheticPose(90);
+    for (const i of [25, 26, 27, 28]) p[i] = lm(0.5, 0.9, 0, 0);
+    return p;
+  }
+
+  it('visibleJoints finds only joints with all 3 landmarks seen', () => {
+    const v = visibleJoints(upperBodyPose());
+    expect(v).toEqual(expect.arrayContaining(['elbowL', 'elbowR', 'shoulderL', 'shoulderR']));
+    expect(v).not.toContain('kneeL');
+    expect(v).not.toContain('kneeR');
+    expect(v).not.toContain('hipL');
+    expect(v).not.toContain('hipR');
+  });
+
+  it('returns [] when landmarks are short', () => {
+    expect(visibleJoints([lm(0, 0)])).toEqual([]);
+  });
+
+  it('jointAngles returns null for joints outside the visible set', () => {
+    const p = upperBodyPose();
+    const out = jointAngles(p, new Set(visibleJoints(p)));
+    expect(out.elbowL).toBeCloseTo(90, 6);
+    expect(out.kneeL).toBeNull();
+    expect(out.hipR).toBeNull();
+  });
+
+  it('jointAngles without a visible set keeps legacy full behavior', () => {
+    const out = jointAngles(upperBodyPose());
+    expect(out.elbowL).toBeCloseTo(90, 6);
+    expect(out.kneeL).not.toBeNull();
+  });
+
+  it('jointAngleSeries is NaN for joints not visible in the frame', () => {
+    const p = upperBodyPose();
+    const frames: PoseFrame[] = [
+      { timestampMs: 0, landmarks: p, hasPose: true, visibleJoints: visibleJoints(p) },
+    ];
+    expect(jointAngleSeries(frames, 'kneeL')[0]).toBeNaN();
+    expect(jointAngleSeries(frames, 'elbowL')[0]).toBeCloseTo(90, 6);
+  });
+
+  it('frameVisibleJoints falls back to all joints for legacy sessions', () => {
+    const f: PoseFrame = { timestampMs: 0, landmarks: syntheticPose(90), hasPose: true };
+    expect(frameVisibleJoints(f)).toHaveLength(8);
+    const empty: PoseFrame = { timestampMs: 0, landmarks: [], hasPose: false };
+    expect(frameVisibleJoints(empty)).toEqual([]);
+  });
+
+  it('sessionTrackedJoints keeps joints visible in enough frames', () => {
+    const p = syntheticPose(90);
+    const frames: PoseFrame[] = [
+      { timestampMs: 0, landmarks: p, hasPose: true, visibleJoints: ['elbowL', 'shoulderL'] },
+      { timestampMs: 50, landmarks: p, hasPose: true, visibleJoints: ['elbowL', 'shoulderL'] },
+      { timestampMs: 100, landmarks: p, hasPose: true, visibleJoints: ['elbowL'] },
+      { timestampMs: 150, landmarks: p, hasPose: true, visibleJoints: ['kneeL'] },
+    ];
+    const tracked = sessionTrackedJoints(frames);
+    // elbowL 4/4, shoulderL 2/4 >= 0.4 -> tracked; kneeL 1/4 -> not tracked
+    expect(tracked).toEqual(expect.arrayContaining(['elbowL', 'shoulderL']));
+    expect(tracked).not.toContain('kneeL');
+  });
+
+  it('sessionTrackedJoints returns [] when no usable frames', () => {
+    expect(sessionTrackedJoints([])).toEqual([]);
   });
 });

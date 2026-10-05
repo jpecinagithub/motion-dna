@@ -162,13 +162,13 @@ export async function processVideoFrames(
           frame = null;
         }
       }
-      const stored: PoseFrame = frame ?? { timestampMs, landmarks: [], hasPose: false };
+      const stored: PoseFrame = frame ?? { timestampMs, landmarks: [], hasPose: false, visibleJoints: [] };
       if (stored.hasPose) preview = stored;
       frames.push(stored);
     } catch {
       // One bad frame must never reject the whole run.
       if (signal?.aborted) throw abortError();
-      frames.push({ timestampMs, landmarks: [], hasPose: false });
+      frames.push({ timestampMs, landmarks: [], hasPose: false, visibleJoints: [] });
     }
     onProgress(i + 1, total, preview);
     // Yield to the UI between frames.

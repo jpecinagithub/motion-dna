@@ -2,7 +2,7 @@
  * MediaPipe Pose (33 landmarks) topology: indices, bone connections,
  * joint-angle definitions and helpers to map landmarks into scene space.
  */
-import type { JointDef, JointId, Landmark } from '../types';
+import type { JointDef, JointId, Landmark, PoseFrame } from '../types';
 
 export const LANDMARK_COUNT = 33;
 
@@ -106,4 +106,68 @@ export function poseQuality(landmarks: Landmark[]): number {
   let sum = 0;
   for (const p of landmarks) sum += p.visibility ?? 0.5;
   return sum / landmarks.length;
+}
+
+/* ---------------- partial-body support ---------------- */
+
+/**
+ * Per-landmark visibility at or above this counts as "seen".
+ * Deliberately lenient: MediaPipe reports ~0.35+ for in-frame body parts even
+ * in good full-body detections, so 0.5 would make joints flicker.
+ */
+export const VISIBILITY_JOINT_THRESHOLD = 0.3;
+
+/** A frame is usable when at least this many of the 8 tracked joints are visible. */
+export const MIN_VISIBLE_JOINTS_PER_FRAME = 2;
+
+/** Fraction of usable frames a joint must be visible in to count as "tracked" for a session. */
+export const TRACKED_JOINT_MIN_FRACTION = 0.4;
+
+/**
+ * The tracked joints whose a/b/c landmarks are all above the visibility
+ * threshold — i.e. the joints we can actually measure in this frame.
+ */
+export function visibleJoints(
+  landmarks: Landmark[],
+  threshold: number = VISIBILITY_JOINT_THRESHOLD,
+): JointId[] {
+  if (!landmarks || landmarks.length < LANDMARK_COUNT) return [];
+  const vis = (i: number): number => landmarks[i]?.visibility ?? 0;
+  return JOINT_IDS.filter((id) => {
+    const j = JOINTS[id];
+    return vis(j.a) >= threshold && vis(j.b) >= threshold && vis(j.c) >= threshold;
+  });
+}
+
+/**
+ * Visible joints for a frame, backward compatible with sessions saved before
+ * partial-body support (no visibleJoints field): those fall back to "all
+ * joints when hasPose", preserving the old full-body behavior.
+ */
+export function frameVisibleJoints(frame: {
+  hasPose: boolean;
+  landmarks: Landmark[];
+  visibleJoints?: JointId[];
+}): JointId[] {
+  if (frame.visibleJoints) return frame.visibleJoints;
+  if (frame.hasPose && frame.landmarks && frame.landmarks.length >= LANDMARK_COUNT)
+    return [...JOINT_IDS];
+  return [];
+}
+
+/**
+ * Joints visible in at least minFraction of the usable frames: the joints the
+ * session can meaningfully analyze. Falls back to all 8 for old sessions.
+ */
+export function sessionTrackedJoints(
+  frames: PoseFrame[],
+  minFraction: number = TRACKED_JOINT_MIN_FRACTION,
+): JointId[] {
+  const usable = frames.filter((f) => f.hasPose);
+  if (usable.length === 0) return [];
+  const counts = new Map<JointId, number>();
+  for (const f of usable) {
+    for (const id of frameVisibleJoints(f)) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return JOINT_IDS.filter((id) => (counts.get(id) ?? 0) / usable.length >= minFraction);
 }

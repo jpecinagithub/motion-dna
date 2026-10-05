@@ -17,6 +17,12 @@ export interface PoseFrame {
   landmarks: Landmark[];
   worldLandmarks?: Landmark[];
   hasPose: boolean;
+  /**
+   * Joints with all 3 landmarks above the visibility threshold.
+   * Partial-body support: only these joints get angles/trails/metrics.
+   * Optional for backward compatibility with older saved sessions.
+   */
+  visibleJoints?: JointId[];
 }
 
 export type SessionSource = 'video' | 'camera' | 'synthetic';

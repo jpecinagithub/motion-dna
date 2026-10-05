@@ -7,6 +7,7 @@
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { Landmark, PoseFrame } from '../../types';
 import { MEDIAPIPE_MODEL_URL } from '../../config';
+import { MIN_VISIBLE_JOINTS_PER_FRAME, visibleJoints } from '../joints';
 
 export type PoseEngineStage = 'wasm' | 'model' | 'ready';
 
@@ -30,8 +31,7 @@ const WASM_URLS = [
   `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`,
   `https://unpkg.com/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`,
 ];
-/** Lenient acceptance threshold for synthetic/demo-friendly detection. */
-const MIN_VISIBILITY = 0.2;
+
 
 function toLandmark(p: { x: number; y: number; z: number; visibility?: number }): Landmark {
   return { x: p.x, y: p.y, z: p.z, visibility: p.visibility ?? 0 };
@@ -98,12 +98,13 @@ export async function createPoseEngine(): Promise<PoseEngine> {
       const raw = result.landmarks?.[0];
       if (!raw || raw.length === 0) return null;
       const landmarks = raw.map(toLandmark);
-      const meanVisibility =
-        landmarks.reduce((sum, p) => sum + (p.visibility ?? 0), 0) / landmarks.length;
-      const hasPose = meanVisibility >= MIN_VISIBILITY;
+      // Partial-body support: a frame is usable when at least a couple of the
+      // tracked joints are visible — the full body is NOT required.
+      const vj = visibleJoints(landmarks);
+      const hasPose = vj.length >= MIN_VISIBLE_JOINTS_PER_FRAME;
       const world = result.worldLandmarks?.[0];
       const worldLandmarks = world ? world.map(toLandmark) : undefined;
-      return { timestampMs, landmarks, worldLandmarks, hasPose };
+      return { timestampMs, landmarks, worldLandmarks, hasPose, visibleJoints: vj };
     },
 
     async dispose(): Promise<void> {

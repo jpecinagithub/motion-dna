@@ -6,7 +6,7 @@
 import type { Landmark, MotionSession, PoseFrame } from '../../types';
 import { computeMetrics } from '../math';
 import { uid } from '../utils';
-import { LANDMARK_COUNT, LM } from '../joints';
+import { JOINT_IDS, LANDMARK_COUNT, LM } from '../joints';
 
 export type SyntheticKind = 'jump' | 'squat' | 'dance';
 
@@ -197,6 +197,7 @@ function buildFrames(durationSec: number, animate: Animator): PoseFrame[] {
       landmarks,
       worldLandmarks: landmarks.map((p) => ({ ...p, z: p.z * 2 })),
       hasPose: true,
+      visibleJoints: [...JOINT_IDS],
     });
   }
   return frames;

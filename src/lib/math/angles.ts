@@ -2,7 +2,7 @@
  * Joint-angle geometry on MediaPipe pose landmarks.
  */
 import type { JointId, Landmark, PoseFrame } from '../../types';
-import { JOINT_IDS, JOINTS, LANDMARK_COUNT } from '../joints';
+import { JOINT_IDS, JOINTS, LANDMARK_COUNT, frameVisibleJoints } from '../joints';
 import { vdot, vlen, vsub } from './vec';
 
 /**
@@ -20,12 +20,21 @@ export function angleAt(a: Landmark, b: Landmark, c: Landmark): number {
   return Math.min(180, Math.max(0, deg));
 }
 
-/** Angles for the 8 tracked JOINTS; null for every joint when landmarks are empty/short. */
-export function jointAngles(landmarks: Landmark[]): Record<JointId, number | null> {
+/**
+ * Angles for the 8 tracked JOINTS.
+ * - null for every joint when landmarks are empty/short.
+ * - null for joints outside `visible` when a visibility set is given
+ *   (partial-body support: don't invent angles for unseen joints).
+ * Without `visible` every joint is computed (legacy behavior).
+ */
+export function jointAngles(
+  landmarks: Landmark[],
+  visible: Set<JointId> | null = null,
+): Record<JointId, number | null> {
   const out = {} as Record<JointId, number | null>;
   const ok = !!landmarks && landmarks.length >= LANDMARK_COUNT;
   for (const id of JOINT_IDS) {
-    if (!ok) {
+    if (!ok || (visible && !visible.has(id))) {
       out[id] = null;
       continue;
     }
@@ -35,10 +44,14 @@ export function jointAngles(landmarks: Landmark[]): Record<JointId, number | nul
   return out;
 }
 
-/** Per-frame angle for one joint; NaN where the frame has no pose (or landmarks are empty). */
+/**
+ * Per-frame angle for one joint; NaN where the frame has no pose or the joint
+ * isn't visible in that frame (partial-body support).
+ */
 export function jointAngleSeries(frames: PoseFrame[], id: JointId): number[] {
   return frames.map((f) => {
     if (!f.hasPose || !f.landmarks || f.landmarks.length === 0) return NaN;
+    if (!frameVisibleJoints(f).includes(id)) return NaN;
     const v = jointAngles(f.landmarks)[id];
     return v === null ? NaN : v;
   });
