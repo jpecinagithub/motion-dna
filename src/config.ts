@@ -1,8 +1,7 @@
 /**
  * App-wide configuration.
- * AUTHOR_NAME is a placeholder: the real author name will be added later.
  */
-export const AUTHOR_NAME = 'MOTION//DNA Lab';
+export const AUTHOR_NAME = 'Jon Peciña';
 
 export const APP_NAME = 'MOTION//DNA';
 export const APP_TAGLINE = 'Upload a video. See the movement hidden inside it.';
