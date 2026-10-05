@@ -24,6 +24,7 @@ export function AngleArc({
   showLabel?: boolean;
 }): ReactElement | null {
   const def = JOINTS[jointId];
+  const color = JOINT_COLORS[jointId] ?? '#8b5cf6';
 
   const arc = useMemo(() => {
     const scene = landmarksToScene(landmarks);
@@ -48,28 +49,30 @@ export function AngleArc({
       );
     }
     return {
-      geometry: new THREE.BufferGeometry().setFromPoints(pts),
+      line: new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color, toneMapped: false }),
+      ),
       b: bv,
       angle,
     };
-  }, [landmarks, def]);
+  }, [landmarks, def, color]);
 
   useEffect(() => {
     return () => {
-      arc?.geometry.dispose();
+      arc?.line.geometry.dispose();
+      (arc?.line.material as THREE.Material).dispose();
     };
   }, [arc]);
 
   if (!arc) return null;
 
-  const color = JOINT_COLORS[jointId] ?? '#8b5cf6';
-
   return (
     <group>
-      {/* R3F v9 exposes THREE.Line as <threeLine> (avoids the SVG <line> clash) */}
-      <threeLine geometry={arc.geometry}>
-        <lineBasicMaterial color={color} toneMapped={false} />
-      </threeLine>
+      {/* NOTE: rendered via <primitive> on purpose — R3F v9 has no <threeLine>
+          catalogue entry (THREE.Line clashes with the SVG <line> name), and a
+          wrong intrinsic crashes the whole canvas. */}
+      <primitive object={arc.line} />
       {showLabel && (
         <Html
           center
