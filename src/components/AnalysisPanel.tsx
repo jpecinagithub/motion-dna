@@ -10,34 +10,36 @@ import { JOINT_IDS } from '../lib/joints';
 import { JOINT_COLORS } from '../config';
 
 const PANEL =
-  'w-72 shrink-0 rounded-2xl border border-white/10 bg-[#0a0f1c]/90 p-4 text-[#e8eefc] backdrop-blur space-y-5';
+  'w-72 shrink-0 rounded-2xl border border-white/10 bg-[#0a0f1c]/90 p-4 text-[#e8eefc] backdrop-blur space-y-4';
 
 function maxOf(arr: number[]): number {
   return arr.reduce((m, v) => (v > m ? v : m), 1e-9);
 }
 
-function MetricRow({
+function MetricCell({
   label,
-  value,
-  max,
   display,
+  pct,
   color,
 }: {
   label: string;
-  value: number;
-  max: number;
   display: string;
+  pct: number;
   color: string;
 }) {
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
-    <div>
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="text-[#8b98b8]">{label}</span>
-        <span className="font-mono text-[#e8eefc]">{display}</span>
+    <div className="rounded-lg bg-white/[0.03] px-2 py-1.5">
+      <div className="flex items-baseline justify-between gap-1">
+        <span className="truncate text-[10px] uppercase tracking-wider text-[#8b98b8]">
+          {label}
+        </span>
+        <span className="font-mono text-xs text-[#e8eefc]">{display}</span>
       </div>
       <div className="mt-1 h-1 overflow-hidden rounded bg-white/10">
-        <div className="h-full rounded" style={{ width: `${pct}%`, background: color }} />
+        <div
+          className="h-full rounded"
+          style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: color }}
+        />
       </div>
     </div>
   );
@@ -92,44 +94,30 @@ export function AnalysisPanel(): ReactElement {
         {t('analysis.title')}
       </h2>
 
+      {/* Joints + live angles in a single compact list (was two stacked lists) */}
       <section>
-        <h3 className="mb-2 text-[11px] font-medium uppercase tracking-widest text-[#8b98b8]">
+        <h3 className="mb-1.5 text-[11px] font-medium uppercase tracking-widest text-[#8b98b8]">
           {t('analysis.joints')}
         </h3>
-        <ul className="space-y-1.5">
-          {JOINT_IDS.map((id) => (
-            <li key={id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selectedJoints.includes(id)}
-                onChange={() => toggleJoint(id)}
-                aria-label={t(('joint.' + id) as DictKey)}
-                className="h-3.5 w-3.5 accent-[#3b82f6]"
-              />
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: JOINT_COLORS[id] ?? '#ffffff' }}
-              />
-              <span className="flex-1">{t(('joint.' + id) as DictKey)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <h3 className="mb-2 text-[11px] font-medium uppercase tracking-widest text-[#8b98b8]">
-          {t('analysis.angles')}
-        </h3>
-        <ul className="space-y-1.5">
+        <ul className="space-y-1">
           {JOINT_IDS.map((id) => {
             const a = angles[id];
             return (
-              <li key={id} className="flex items-center gap-2 text-sm">
+              <li key={id} className="flex items-center gap-2 text-[13px] leading-5">
+                <input
+                  type="checkbox"
+                  checked={selectedJoints.includes(id)}
+                  onChange={() => toggleJoint(id)}
+                  aria-label={t(('joint.' + id) as DictKey)}
+                  className="h-3.5 w-3.5 shrink-0 accent-[#3b82f6]"
+                />
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-2 w-2 shrink-0 rounded-full"
                   style={{ background: JOINT_COLORS[id] ?? '#ffffff' }}
                 />
-                <span className="flex-1 text-[#8b98b8]">{t(('joint.' + id) as DictKey)}</span>
+                <span className="flex-1 truncate text-[#c6d0e8]">
+                  {t(('joint.' + id) as DictKey)}
+                </span>
                 <span className="font-mono text-[#e8eefc]">
                   {a != null ? `${Math.round(a)}°` : '—'}
                 </span>
@@ -139,38 +127,35 @@ export function AnalysisPanel(): ReactElement {
         </ul>
       </section>
 
-      <section className="space-y-3">
-        <MetricRow
+      {/* Metrics as a 2x2 grid instead of a tall stacked list */}
+      <section className="grid grid-cols-2 gap-1.5">
+        <MetricCell
           label={t('analysis.speed')}
-          value={speedNow}
-          max={maxSpeed}
           display={speedNow.toFixed(2)}
+          pct={maxSpeed > 0 ? (speedNow / maxSpeed) * 100 : 0}
           color="#3b82f6"
         />
-        <MetricRow
+        <MetricCell
           label={t('analysis.accel')}
-          value={accelNow}
-          max={maxAccel}
           display={accelNow.toFixed(2)}
+          pct={maxAccel > 0 ? (accelNow / maxAccel) * 100 : 0}
           color="#8b5cf6"
         />
-        <MetricRow
+        <MetricCell
           label={t('analysis.symmetry')}
-          value={symmetry}
-          max={1}
           display={`${Math.round(symmetry * 100)}%`}
+          pct={symmetry * 100}
           color="#34d399"
         />
-        <MetricRow
+        <MetricCell
           label={t('analysis.rhythm')}
-          value={regularity}
-          max={1}
           display={bpm > 0 ? `${bpm} ${t('analysis.bpm')}` : '—'}
+          pct={regularity * 100}
           color="#fbbf24"
         />
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-2">
         <div>
           <div className="flex items-baseline justify-between text-xs">
             <label htmlFor="trail-length" className="text-[#8b98b8]">
@@ -188,10 +173,10 @@ export function AnalysisPanel(): ReactElement {
             step={5}
             value={trailLength}
             onChange={(e) => setTrailLength(Number(e.target.value))}
-            className="mt-1 w-full accent-[#3b82f6]"
+            className="mt-0.5 w-full accent-[#3b82f6]"
           />
         </div>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <label className="flex cursor-pointer items-center gap-2 text-[13px]">
           <input
             type="checkbox"
             checked={showLabels}
@@ -202,7 +187,7 @@ export function AnalysisPanel(): ReactElement {
         </label>
       </section>
 
-      <p className="border-l-2 border-amber-400/50 pl-2 text-xs leading-relaxed text-amber-300/80">
+      <p className="border-l-2 border-amber-400/50 pl-2 text-[11px] leading-snug text-amber-300/80">
         {t('analysis.estimated')}
       </p>
     </aside>
