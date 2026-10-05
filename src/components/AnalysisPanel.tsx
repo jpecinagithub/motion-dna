@@ -11,7 +11,7 @@ import { JOINT_IDS, frameVisibleJoints, sessionTrackedJoints } from '../lib/join
 import { JOINT_COLORS } from '../config';
 
 const PANEL =
-  'w-72 shrink-0 rounded-2xl border border-white/10 bg-[#0a0f1c]/90 p-4 text-[#e8eefc] backdrop-blur space-y-4';
+  'shrink-0 rounded-2xl border border-white/10 bg-[#0a0f1c]/90 p-4 text-[#e8eefc] backdrop-blur space-y-4';
 
 function maxOf(arr: number[]): number {
   return arr.reduce((m, v) => (v > m ? v : m), 1e-9);
@@ -34,7 +34,7 @@ function MetricCell({
         <span className="truncate text-[10px] uppercase tracking-wider text-[#8b98b8]">
           {label}
         </span>
-        <span className="font-mono text-xs text-[#e8eefc]">{display}</span>
+        <span className="shrink-0 whitespace-nowrap font-mono text-xs text-[#e8eefc]">{display}</span>
       </div>
       <div className="mt-1 h-1 overflow-hidden rounded bg-white/10">
         <div
@@ -180,11 +180,11 @@ export function AnalysisPanel(): ReactElement {
 
       <section className="space-y-2">
         <div>
-          <div className="flex items-baseline justify-between text-xs">
-            <label htmlFor="trail-length" className="text-[#8b98b8]">
+          <div className="flex items-baseline justify-between gap-2 text-xs">
+            <label htmlFor="trail-length" className="truncate text-[#8b98b8]">
               {t('analysis.trailLength')}
             </label>
-            <span className="font-mono text-[#e8eefc]">
+            <span className="shrink-0 whitespace-nowrap font-mono text-[#e8eefc]">
               {trailLength} {t('analysis.frames')}
             </span>
           </div>
