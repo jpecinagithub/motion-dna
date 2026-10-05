@@ -130,6 +130,7 @@ export function LiveView(): ReactElement {
         await video.play();
         const { createPoseEngine } = await import('../lib/mediapipe');
         const engine = await createPoseEngine();
+        await engine.init();
         if (cancelled) {
           await engine.dispose().catch(() => undefined);
           return;

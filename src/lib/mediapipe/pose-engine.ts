@@ -18,7 +18,18 @@ export interface PoseEngine {
   dispose(): Promise<void>;
 }
 
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.29/wasm';
+/**
+ * WASM fileset for the vision tasks runtime.
+ * IMPORTANT: the version MUST match the installed @mediapipe/tasks-vision
+ * package (pinned exact in package.json). A mismatch (or a version that was
+ * never published, like the old 0.10.29) makes FilesetResolver throw and the
+ * whole pose pipeline silently returns zero detections.
+ */
+const TASKS_VISION_VERSION = '0.10.35';
+const WASM_URLS = [
+  `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`,
+  `https://unpkg.com/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`,
+];
 /** Lenient acceptance threshold for synthetic/demo-friendly detection. */
 const MIN_VISIBILITY = 0.2;
 
@@ -45,7 +56,20 @@ export async function createPoseEngine(): Promise<PoseEngine> {
       const vision = await import('@mediapipe/tasks-vision');
 
       onStage?.('wasm');
-      const fileset = await vision.FilesetResolver.forVisionTasks(WASM_URL);
+      // Try the primary CDN, fall back to the mirror — the fileset must load
+      // or every later detectForVideo call silently returns null.
+      const loadFileset = async () => {
+        let lastError: unknown = null;
+        for (const url of WASM_URLS) {
+          try {
+            return await vision.FilesetResolver.forVisionTasks(url);
+          } catch (e) {
+            lastError = e;
+          }
+        }
+        throw lastError instanceof Error ? lastError : new Error('wasmFailed');
+      };
+      const fileset = await loadFileset();
 
       onStage?.('model');
       const options = (delegate: 'GPU' | 'CPU') => ({

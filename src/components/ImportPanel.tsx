@@ -102,6 +102,9 @@ export function ImportPanel() {
     let engine;
     try {
       engine = await createPoseEngine();
+      // NB: without init() the landmarker stays null and every frame
+      // silently yields no pose — this was the "no pose detected" bug.
+      await engine.init();
     } catch {
       st.setNotice(t('errors.modelFailed'));
       URL.revokeObjectURL(vf.url);
